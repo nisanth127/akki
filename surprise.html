@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Birthday Surprise!</title>
+    <style>
+        :root {
+            --primary: #ff4f81;
+            --glass: rgba(255, 255, 255, 0.1);
+            --border: rgba(255, 255, 255, 0.2);
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            overflow: hidden; background: #0a0a12;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex; justify-content: center; align-items: center;
+            color: white;
+        }
+
+        /* Fireworks Canvas */
+        #canvas {
+            position: absolute; top: 0; left: 0; 
+            width: 100%; height: 100%; z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Initial Overlay */
+        #overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 1000;
+            display: flex; justify-content: center; align-items: center;
+            flex-direction: column; cursor: pointer; text-align: center;
+        }
+
+        .gift-box { font-size: 80px; transition: transform 0.3s ease; }
+        #overlay:hover .gift-box { transform: scale(1.1); }
+
+        /* General Containers */
+        .content-layer {
+            position: relative; z-index: 10; width: 90%; 
+            max-width: 400px; text-align: center;
+        }
+
+        /* First Wish Animation */
+        #wish {
+            font-size: 2.5rem; font-weight: 800; 
+            text-transform: uppercase; letter-spacing: 2px;
+            text-shadow: 0 0 20px var(--primary);
+            display: none;
+        }
+
+        /* Video Styling */
+        .video-box {
+            display: none; opacity: 0; transition: opacity 0.8s;
+            background: #000; padding: 5px; border-radius: 20px;
+            border: 2px solid var(--primary);
+            box-shadow: 0 0 30px rgba(255, 79, 129, 0.4);
+        }
+        video { width: 100%; border-radius: 15px; display: block; }
+
+        /* Final Letter Styling - Perfect for Mobile */
+        #finalMsg {
+            display: none; opacity: 0;
+            max-height: 75vh; overflow-y: auto;
+            background: var(--glass);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 25px; border-radius: 25px;
+            border: 1px solid var(--border);
+            text-align: left; font-size: 1rem;
+            line-height: 1.6;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .highlight { color: var(--primary); font-weight: bold; }
+
+        /* Custom Scrollbar for the message */
+        #finalMsg::-webkit-scrollbar { width: 4px; }
+        #finalMsg::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="overlay">
+        <div class="gift-box">🎁</div>
+        <p style="margin-top: 15px; font-weight: 300; letter-spacing: 1px;">Tap to open your surprise</p>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <div class="content-layer">
+        <div id="wish">Happy Birthday! 🎂</div>
+
+        <div class="video-box" id="videoContainer">
+            <video id="myVideo" playsinline>
+                <source src="memory.mp4" type="video/mp4">
+            </video>
+        </div>
+
+        <div id="finalMsg">
+            Happy Birthday <span class="highlight">chinnu</span> 🐣🐥💖<br><br>
+            You’ll always have a very special place in my heart and in my life. ✨ You’re not just a friend to me; you’re different and in my story you will be the best chapter. 🌈<br><br>
+            My love and care towards you is forever and ever. ♾️ I’m so thankful that we both support and stand by each other in our low and hard times. 🫂🤝<br><br>
+            Sometimes you get hurt because of me, and I’m truly sorry for that. I swear... you are much more important to me than my ego. 🥺<br><br>
+            Because of you, I’ve changed a lot and I’ve become a better person. 🌟 In my life, you will always be the best part after my family. ❤️🏠<br><br>
+            You respect me so much that sometimes I think... do I really deserve all this? 🥺 But you always prove me wrong. Nannu nala ishtapade vallu unnaru ante, adi nuvve. 💓<br><br>
+            I hope nuvvu ne life lo inka manchi ga happy ga ilaga chala birthdays celebrate chesukovali 🎂🎈 and you’re always going to be a little baby in my eyes. 👶🏻🍼<br><br>
+            So please be safe. When I’m not with you, if you ever feel sad or low... just remember, I’m always here to listen to you. 🫂👂<br><br>
+            Love you a lot maa. 🥰 Enjoy your day maa chinnu 🐣🐥 ✨🥳🎊...<br><br>
+            You're the best unplanned thing that happened in my life...<br><br>
+            <center><span class="highlight" style="font-size: 1.4rem;">Happy Birthday Akhila 💖</span></center>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const overlay = document.getElementById('overlay');
+        const video = document.getElementById('myVideo');
+        const videoContainer = document.getElementById('videoContainer');
+        const wish = document.getElementById('wish');
+        const finalMsg = document.getElementById('finalMsg');
+
+        let particles = [];
+
+        // Firework Particle System
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y;
+                this.color = color;
+                this.velocity = {
+                    x: (Math.random() - 0.5) * 8,
+                    y: (Math.random() - 0.5) * 8
+                };
+                this.alpha = 1;
+                this.friction = 0.95;
+            }
+            draw() {
+                ctx.globalAlpha = this.alpha;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+            update() {
+                this.velocity.x *= this.friction;
+                this.velocity.y *= this.friction;
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                this.alpha -= 0.01;
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            ctx.fillStyle = 'rgba(10, 10, 18, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            particles.forEach((p, i) => {
+                if (p.alpha > 0) { p.update(); p.draw(); }
+                else { particles.splice(i, 1); }
+            });
+        }
+
+        function explode() {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height * 0.5;
+            const color = `hsl(${Math.random() * 360}, 100%, 60%)`;
+            for (let i = 0; i < 60; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        // Handle Resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Sequence Controller
+        overlay.addEventListener('click', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            animate();
+            overlay.style.display = 'none';
+            
+            // Step 1: Show Birthday Wish
+            wish.style.display = 'block';
+            explode();
+            let interval = setInterval(explode, 800);
+
+            // Step 2: Show Video
+            setTimeout(() => {
+                wish.style.display = 'none';
+                videoContainer.style.display = 'block';
+                setTimeout(() => {
+                    videoContainer.style.opacity = '1';
+                    video.play();
+                }, 100);
+            }, 3000);
+
+            video.onended = () => {
+                // Step 3: Show Final Message
+                videoContainer.style.opacity = '0';
+                setTimeout(() => {
+                    videoContainer.style.display = 'none';
+                    finalMsg.style.display = 'block';
+                    setTimeout(() => finalMsg.style.opacity = '1', 50);
+                    // Continuous fireworks for the end!
+                }, 800);
+            };
+        });
+    </script>
+</body>
+</html>
